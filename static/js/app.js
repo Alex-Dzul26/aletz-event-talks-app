@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const refreshBtn = document.getElementById('refreshBtn');
   const refreshSpinner = document.getElementById('refreshSpinner');
+  const exportCsvBtn = document.getElementById('exportCsvBtn');
   const lastUpdatedText = document.getElementById('lastUpdatedText');
   const searchInput = document.getElementById('searchInput');
   const clearSearchBtn = document.getElementById('clearSearchBtn');
@@ -40,6 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshBtn.addEventListener('click', () => {
     loadFeed(true);
   });
+
+  exportCsvBtn.addEventListener('click', exportToCsv);
 
   searchInput.addEventListener('input', (e) => {
     searchQuery = e.target.value.trim().toLowerCase();
@@ -270,11 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="item-body">${item.html}</div>
           <div class="item-actions">
-            <button class="btn btn-sm btn-secondary copy-item-btn" data-id="${item.id}">
-              📋 Copy Snippet
+            <button class="btn btn-sm btn-secondary copy-item-btn" data-id="${item.id}" title="Copiar esta novedad al portapapeles">
+              📋 Copiar al portapapeles
             </button>
             <a href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">
-              🔗 Docs Anchor
+              🔗 Documentación oficial ↗
             </a>
           </div>
         `;
@@ -297,10 +300,20 @@ document.addEventListener('DOMContentLoaded', () => {
           openTweetModalForItem({ ...item, entryDate: entry.title });
         });
 
-        // Copy item snippet
-        card.querySelector('.copy-item-btn').addEventListener('click', () => {
+        // Copy item snippet button
+        const copyBtn = card.querySelector('.copy-item-btn');
+        copyBtn.addEventListener('click', () => {
           const snippet = `[BigQuery ${item.category} - ${entry.title}]\n${item.plain_text}\n${item.link}`;
-          copyToClipboard(snippet, 'Update details copied to clipboard!');
+          copyToClipboard(snippet, '✓ Novedad copiada al portapapeles');
+          
+          // Visual feedback on button
+          const originalText = copyBtn.innerHTML;
+          copyBtn.innerHTML = '✓ ¡Copiado!';
+          copyBtn.style.color = '#4ade80';
+          setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+            copyBtn.style.color = '';
+          }, 2000);
         });
 
         groupEl.appendChild(card);
@@ -428,6 +441,43 @@ document.addEventListener('DOMContentLoaded', () => {
     toast._timer = setTimeout(() => {
       toast.classList.add('hidden');
     }, duration);
+  }
+
+  function exportToCsv() {
+    if (!allItems || allItems.length === 0) {
+      showToast('No hay datos disponibles para exportar.');
+      return;
+    }
+
+    const headers = ['Fecha', 'Categoría', 'Descripción', 'Enlace Oficial'];
+    const rows = [headers];
+
+    allItems.forEach(item => {
+      const date = item.entryDate || '';
+      const category = item.category || 'Update';
+      const text = (item.plain_text || '').replace(/\r?\n|\r/g, ' ').trim();
+      const link = item.link || item.entryLink || '';
+      rows.push([date, category, text, link]);
+    });
+
+    // RFC 4180 CSV generation with escaped quotes
+    const csvContent = rows
+      .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+      .join('\r\n');
+
+    // UTF-8 BOM (\uFEFF) ensures special characters display correctly in Excel
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const today = new Date().toISOString().split('T')[0];
+    a.href = url;
+    a.download = `bigquery-release-notes-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast(`✓ Archivo CSV descargado con éxito (${allItems.length} registros)`);
   }
 
   function escapeHtml(str) {
