@@ -8,7 +8,7 @@ import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 
 PORT = 5000
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -111,7 +111,7 @@ def fetch_and_parse_feed(force_refresh=False):
         parsed_data = {
             "title": feed_title,
             "updated": feed_updated,
-            "fetched_at": datetime.utcnow().isoformat() + "Z",
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
             "total_entries": len(entries),
             "total_items": sum(len(e["items"]) for e in entries),
             "entries": entries,
