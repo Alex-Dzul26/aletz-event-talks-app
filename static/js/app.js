@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const refreshBtn = document.getElementById('refreshBtn');
   const refreshSpinner = document.getElementById('refreshSpinner');
   const exportCsvBtn = document.getElementById('exportCsvBtn');
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  const themeIcon = document.getElementById('themeIcon');
   const lastUpdatedText = document.getElementById('lastUpdatedText');
   const searchInput = document.getElementById('searchInput');
   const clearSearchBtn = document.getElementById('clearSearchBtn');
@@ -33,6 +35,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const copyTweetBtn = document.getElementById('copyTweetBtn');
   const launchTweetBtn = document.getElementById('launchTweetBtn');
   const toast = document.getElementById('toast');
+
+  // Theme Management
+  initTheme();
+
+  function initTheme() {
+    const savedTheme = localStorage.getItem('bq_theme') || 'dark';
+    applyTheme(savedTheme, false);
+
+    themeToggleBtn.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(newTheme, true);
+    });
+  }
+
+  function applyTheme(theme, notify = false) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('bq_theme', theme);
+    
+    if (theme === 'light') {
+      themeIcon.textContent = '🌙';
+      themeToggleBtn.title = 'Cambiar a Modo Oscuro';
+      if (notify) showToast('Modo Claro activado ☀️');
+    } else {
+      themeIcon.textContent = '☀️';
+      themeToggleBtn.title = 'Cambiar a Modo Claro';
+      if (notify) showToast('Modo Oscuro activado 🌙');
+    }
+  }
 
   // Initial Fetch
   loadFeed(false);
