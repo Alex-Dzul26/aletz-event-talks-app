@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BigQuery Release Notes Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <div class="app-wrapper">
+    <!-- Navbar / Header -->
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/>
+              <circle cx="18" cy="18" r="3" fill="#4285F4" stroke="none"/>
+              <path d="M21 21l-1.5-1.5" stroke="#4285F4" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">BigQuery Release Notes</h1>
+            <p class="brand-subtitle">Live Google Cloud BigQuery updates feed & social publisher</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <div class="feed-meta" id="feedMeta">
+            <span class="pulse-indicator"></span>
+            <span id="lastUpdatedText">Loading feed...</span>
+          </div>
+
+          <button id="refreshBtn" class="btn btn-primary" title="Fetch latest updates from XML feed">
+            <svg id="refreshSpinner" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-container">
+      <!-- Toolbar & Controls -->
+      <section class="controls-panel">
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Search features, fixes, SQL syntax, keywords..." />
+          <button id="clearSearchBtn" class="clear-btn" style="display:none;">✕</button>
+        </div>
+
+        <div class="filter-categories" id="categoryFilters">
+          <button class="pill active" data-category="ALL">All Updates (<span id="countAll">0</span>)</button>
+          <button class="pill" data-category="Feature">Features (<span id="countFeature">0</span>)</button>
+          <button class="pill" data-category="Security">Security (<span id="countSecurity">0</span>)</button>
+          <button class="pill" data-category="Changed">Changed (<span id="countChanged">0</span>)</button>
+          <button class="pill" data-category="Fixed">Fixed (<span id="countFixed">0</span>)</button>
+          <button class="pill" data-category="Deprecated">Deprecated (<span id="countDeprecated">0</span>)</button>
+        </div>
+      </section>
+
+      <!-- Selection Floating Action Bar -->
+      <div id="selectionBar" class="selection-bar hidden">
+        <div class="selection-info">
+          <span class="selection-badge" id="selectedCount">0</span> updates selected
+        </div>
+        <div class="selection-actions">
+          <button id="tweetSelectedBtn" class="btn btn-tweet">
+            <svg class="icon-x" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            <span>Compose Tweet with Selected</span>
+          </button>
+          <button id="clearSelectionBtn" class="btn btn-secondary">Clear</button>
+        </div>
+      </div>
+
+      <!-- Feed Container -->
+      <section id="feedContainer" class="feed-container">
+        <!-- Skeleton / Loading State -->
+        <div id="loadingState" class="skeleton-wrapper">
+          <div class="skeleton-card">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line"></div>
+          </div>
+        </div>
+
+        <!-- Dynamic List of Releases -->
+        <div id="entriesList" class="entries-list"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state hidden">
+          <div class="empty-icon">🔍</div>
+          <h3>No release notes match your criteria</h3>
+          <p>Try clearing your search query or choosing another category filter.</p>
+          <button id="resetFiltersBtn" class="btn btn-secondary">Reset Filters</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Tweet Composer Modal -->
+    <div id="tweetModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="x-logo">𝕏</div>
+            <h3>Tweet BigQuery Update</h3>
+          </div>
+          <button id="closeModalBtn" class="btn-close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="modal-hint">Review and edit your tweet before publishing to 𝕏 / Twitter:</p>
+          
+          <div class="tweet-textarea-wrapper">
+            <textarea id="tweetTextarea" rows="6" maxlength="500"></textarea>
+            <div class="tweet-stats">
+              <div class="char-counter" id="charCounter">280</div>
+            </div>
+          </div>
+
+          <div class="hashtag-suggestions">
+            <span class="tag-label">Add Tags:</span>
+            <button class="tag-btn" data-tag="#BigQuery">#BigQuery</button>
+            <button class="tag-btn" data-tag="#GoogleCloud">#GoogleCloud</button>
+            <button class="tag-btn" data-tag="#DataEngineering">#DataEngineering</button>
+            <button class="tag-btn" data-tag="#GCP">#GCP</button>
+            <button class="tag-btn" data-tag="#SQL">#SQL</button>
+            <button class="tag-btn" data-tag="#GenAI">#GenAI</button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="copyTweetBtn" class="btn btn-secondary">
+            <span>📋 Copy Text</span>
+          </button>
+          <button id="launchTweetBtn" class="btn btn-tweet-primary">
+            <svg class="icon-x" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            <span>Post on 𝕏 (Twitter)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
